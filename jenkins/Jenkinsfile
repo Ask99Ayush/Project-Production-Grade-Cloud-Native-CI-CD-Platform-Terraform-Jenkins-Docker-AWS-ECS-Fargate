@@ -1,0 +1,85 @@
+pipeline {
+
+    agent any
+
+    environment {
+
+        AWS_REGION = "ap-south-1"
+
+        APP_NAME = "cloud-native-cicd-app"
+    }
+
+    stages {
+
+        stage('Checkout') {
+
+            steps {
+
+                checkout scm
+            }
+        }
+
+        stage('Build Test Push') {
+
+            steps {
+
+                sh '''
+                    chmod +x jenkins/scripts/*.sh
+                    ./jenkins/scripts/build.sh
+                '''
+            }
+        }
+
+        stage('Deploy Green') {
+
+            steps {
+
+                sh './jenkins/scripts/deploy.sh green'
+            }
+        }
+
+        stage('Validate Green') {
+
+            steps {
+
+                sh './jenkins/scripts/validate.sh green'
+            }
+        }
+
+        stage('Manual Approval') {
+
+            steps {
+
+                timeout(time: 10, unit: 'MINUTES') {
+
+                    input 'Switch traffic to GREEN?'
+                }
+            }
+        }
+
+        stage('Switch Traffic') {
+
+            steps {
+
+                sh './jenkins/scripts/traffic.sh green'
+            }
+        }
+    }
+
+    post {
+
+        success {
+
+            sh './jenkins/scripts/notify.sh SUCCESS'
+        }
+
+        failure {
+
+            sh './jenkins/scripts/deploy.sh blue'
+
+            sh './jenkins/scripts/traffic.sh blue'
+
+            sh './jenkins/scripts/notify.sh FAILURE'
+        }
+    }
+}
