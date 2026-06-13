@@ -15,7 +15,7 @@ ACCOUNT_ID=$(aws sts get-caller-identity
 --query Account 
 --output text)
 
-ECR_URI=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${APP_NAME}
+ECR_URI="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${APP_NAME}"
 
 echo "Building Docker image..."
 
@@ -44,7 +44,7 @@ ${ECR_URI}:${IMAGE_TAG}
 
 docker tag 
 ${APP_NAME}:${IMAGE_TAG} 
-${ECR_URI}
+${ECR_URI}:latest
 
 echo "Pushing image tag ${IMAGE_TAG}..."
 
@@ -52,7 +52,7 @@ docker push ${ECR_URI}:${IMAGE_TAG}
 
 echo "Pushing image tag latest..."
 
-docker push ${ECR_URI}
+docker push ${ECR_URI}:latest
 
 echo "${IMAGE_TAG}" > image-tag.txt
 
@@ -61,7 +61,7 @@ echo "Cleaning local Docker images..."
 docker rmi 
 ${APP_NAME}:${IMAGE_TAG} 
 ${ECR_URI}:${IMAGE_TAG} 
-${ECR_URI} || true
+${ECR_URI}:latest || true
 
 docker image prune -f || true
 
