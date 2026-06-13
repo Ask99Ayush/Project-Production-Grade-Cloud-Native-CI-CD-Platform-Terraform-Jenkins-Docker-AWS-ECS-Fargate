@@ -1,95 +1,142 @@
 pipeline {
 
-    agent any
+agent any
 
-    environment {
+options {
+    timestamps()
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(
+        numToKeepStr: '20',
+        artifactNumToKeepStr: '10'
+    ))
+}
 
-        AWS_REGION = "ap-south-1"
-        APP_NAME = "cloud-native-cicd-app"
+environment {
 
-        ALB_LISTENER_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:listener/app/cloud-native-cicd-alb/63978839430bf6dd/f1c1d32cc81ec141"
+    AWS_REGION = "ap-south-1"
+    APP_NAME   = "cloud-native-cicd-app"
 
-        BLUE_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-blue/847d5087d082ab09"
+    ECS_CLUSTER = "cloud-native-cicd-cluster"
 
-        GREEN_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-green/61c4e3fa24f7deb3"
-    }
+    ALB_LISTENER_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:listener/app/cloud-native-cicd-alb/63978839430bf6dd/f1c1d32cc81ec141"
 
-    stages {
+    BLUE_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-blue/847d5087d082ab09"
 
-        stage('Checkout') {
+    GREEN_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-green/61c4e3fa24f7deb3"
+}
 
-            steps {
+stages {
 
-                checkout scm
-            }
-        }
+    stage('Checkout') {
 
-        stage('Prepare Scripts') {
-
-            steps {
-
-                sh 'chmod +x jenkins/scripts/*.sh'
-            }
-        }
-
-        stage('Build Test Push') {
-
-            steps {
-
-                sh './jenkins/scripts/build.sh'
-            }
-        }
-
-        stage('Deploy Green') {
-
-            steps {
-
-                sh './jenkins/scripts/deploy.sh green'
-            }
-        }
-
-        stage('Validate Green') {
-
-            steps {
-
-                sh './jenkins/scripts/validate.sh green'
-            }
-        }
-
-        stage('Manual Approval') {
-
-            steps {
-
-                timeout(time: 10, unit: 'MINUTES') {
-
-                    input 'Switch traffic to GREEN?'
-                }
-            }
-        }
-
-        stage('Switch Traffic') {
-
-            steps {
-
-                sh './jenkins/scripts/traffic.sh green'
-            }
+        steps {
+            checkout scm
         }
     }
 
-    post {
+    stage('Prepare Scripts') {
 
-        success {
-
-            sh './jenkins/scripts/notify.sh SUCCESS'
-        }
-
-        failure {
-
-            sh './jenkins/scripts/deploy.sh blue'
-
-            sh './jenkins/scripts/traffic.sh blue'
-
-            sh './jenkins/scripts/notify.sh FAILURE'
+        steps {
+            sh '''
+                chmod +x jenkins/scripts/*.sh
+            '''
         }
     }
+
+    stage('Build, Scan & Push') {
+
+        steps {
+
+            sh '''
+                ./jenkins/scripts/build.sh
+            '''
+        }
+    }
+
+    stage('Deploy Green') {
+
+        steps {
+
+            sh '''
+                ./jenkins/scripts/deploy.sh green
+            '''
+        }
+    }
+
+    stage('Validate Green') {
+
+        steps {
+
+            sh '''
+                ./jenkins/scripts/validate.sh green
+            '''
+        }
+    }
+
+    stage('Manual Approval') {
+
+        steps {
+
+            timeout(time: 10, unit: 'MINUTES') {
+
+                input(
+                    message: 'Green environment validated. Switch production traffic?',
+                    ok: 'Deploy'
+                )
+            }
+        }
+    }
+
+    stage('Switch Traffic To Green') {
+
+        steps {
+
+            sh '''
+                ./jenkins/scripts/traffic.sh green
+            '''
+        }
+    }
+}
+
+post {
+
+    success {
+
+        echo "Deployment completed successfully"
+
+        sh '''
+            ./jenkins/scripts/notify.sh SUCCESS
+        '''
+    }
+
+    failure {
+
+        echo "Pipeline failed. Rolling traffic back to BLUE."
+
+        sh '''
+            ./jenkins/scripts/deploy.sh blue || true
+            ./jenkins/scripts/traffic.sh blue || true
+            ./jenkins/scripts/notify.sh FAILURE || true
+        '''
+    }
+
+    aborted {
+
+        echo "Deployment approval rejected or timed out."
+
+        sh '''
+            ./jenkins/scripts/notify.sh ABORTED || true
+        '''
+    }
+
+    always {
+
+        cleanWs(
+            deleteDirs: true,
+            disableDeferredWipeout: true
+        )
+    }
+}
+
+
 }
