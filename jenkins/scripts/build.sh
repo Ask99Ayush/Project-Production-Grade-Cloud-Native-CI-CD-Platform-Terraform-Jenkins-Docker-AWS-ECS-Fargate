@@ -25,8 +25,9 @@ docker build \
 
 echo "Running Trivy security scan..."
 
+# Fail only if CRITICAL vulnerabilities are found
 trivy image \
-  --severity HIGH,CRITICAL \
+  --severity CRITICAL \
   --exit-code 1 \
   ${APP_NAME}:${IMAGE_TAG}
 

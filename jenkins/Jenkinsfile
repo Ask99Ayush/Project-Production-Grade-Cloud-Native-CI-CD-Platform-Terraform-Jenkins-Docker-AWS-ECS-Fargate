@@ -1,124 +1,114 @@
 pipeline {
 
-agent any
+    agent any
 
-options {
-    timestamps()
-    disableConcurrentBuilds()
-    buildDiscarder(logRotator(
-        numToKeepStr: '20',
-        artifactNumToKeepStr: '10'
-    ))
-}
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(
+            numToKeepStr: '20',
+            artifactNumToKeepStr: '10'
+        ))
+    }
 
-environment {
+    environment {
 
-    AWS_REGION = "ap-south-1"
-    APP_NAME   = "cloud-native-cicd-app"
+        AWS_REGION = "ap-south-1"
+        APP_NAME   = "cloud-native-cicd-app"
 
-    ECS_CLUSTER = "cloud-native-cicd-cluster"
+        ECS_CLUSTER = "cloud-native-cicd-cluster"
 
-    ALB_LISTENER_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:listener/app/cloud-native-cicd-alb/63978839430bf6dd/f1c1d32cc81ec141"
+        ALB_LISTENER_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:listener/app/cloud-native-cicd-alb/63978839430bf6dd/f1c1d32cc81ec141"
 
-    BLUE_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-blue/847d5087d082ab09"
+        BLUE_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-blue/847d5087d082ab09"
 
-    GREEN_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-green/61c4e3fa24f7deb3"
-}
+        GREEN_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-green/61c4e3fa24f7deb3"
+    }
 
-stages {
+    stages {
 
-    stage('Checkout') {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
 
-        steps {
-            checkout scm
+        stage('Prepare Scripts') {
+            steps {
+                sh '''
+                    chmod +x jenkins/scripts/*.sh
+                '''
+            }
+        }
+
+        stage('Build, Scan & Push') {
+            steps {
+                sh '''
+                    ./jenkins/scripts/build.sh
+                '''
+            }
+        }
+
+        stage('Deploy Green') {
+            steps {
+                sh '''
+                    ./jenkins/scripts/deploy.sh green
+                '''
+            }
+        }
+
+        stage('Validate Green') {
+            steps {
+                sh '''
+                    ./jenkins/scripts/validate.sh green
+                '''
+            }
+        }
+
+        stage('Switch Traffic To Green') {
+            steps {
+                sh '''
+                    ./jenkins/scripts/traffic.sh green
+                '''
+            }
         }
     }
 
-    stage('Prepare Scripts') {
+    post {
 
-        steps {
+        success {
+
+            echo "Deployment completed successfully"
+
             sh '''
-                chmod +x jenkins/scripts/*.sh
+                ./jenkins/scripts/notify.sh SUCCESS
             '''
         }
-    }
 
-    stage('Build, Scan & Push') {
+        failure {
 
-        steps {
-
-            sh '''
-                ./jenkins/scripts/build.sh
-            '''
-        }
-    }
-
-    stage('Deploy Green') {
-
-        steps {
+            echo "Pipeline failed. Rolling traffic back to BLUE."
 
             sh '''
-                ./jenkins/scripts/deploy.sh green
+                ./jenkins/scripts/deploy.sh blue || true
             '''
-        }
-    }
-
-    stage('Validate Green') {
-
-        steps {
 
             sh '''
-                ./jenkins/scripts/validate.sh green
+                ./jenkins/scripts/traffic.sh blue || true
             '''
-        }
-    }
-
-    stage('Switch Traffic To Green') {
-
-        steps {
 
             sh '''
-                ./jenkins/scripts/traffic.sh green
+                ./jenkins/scripts/notify.sh FAILURE || true
             '''
         }
+
+        always {
+
+            cleanWs(
+                deleteDirs: true,
+                disableDeferredWipeout: true
+            )
+        }
     }
-}
-
-post {
-
-    success {
-
-        echo "Deployment completed successfully"
-
-        sh '''
-            ./jenkins/scripts/notify.sh SUCCESS
-        '''
-    }
-
-    failure {
-
-        echo "Pipeline failed. Rolling traffic back to BLUE."
-
-        sh '''
-            ./jenkins/scripts/deploy.sh blue || true
-        '''
-
-        sh '''
-            ./jenkins/scripts/traffic.sh blue || true
-        '''
-
-        sh '''
-            ./jenkins/scripts/notify.sh FAILURE || true
-        '''
-    }
-
-    always {
-
-        cleanWs(
-            deleteDirs: true,
-            disableDeferredWipeout: true
-        )
-    }
-}
-
 }
