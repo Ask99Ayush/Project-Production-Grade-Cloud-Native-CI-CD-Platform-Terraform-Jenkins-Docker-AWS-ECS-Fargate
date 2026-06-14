@@ -17,7 +17,8 @@ pipeline {
     environment {
 
         AWS_REGION = "ap-south-1"
-        APP_NAME   = "cloud-native-cicd-app"
+
+        APP_NAME = "cloud-native-cicd-app"
 
         ECS_CLUSTER = "cloud-native-cicd-cluster"
 
@@ -26,6 +27,8 @@ pipeline {
         BLUE_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-blue/847d5087d082ab09"
 
         GREEN_TARGET_GROUP_ARN = "arn:aws:elasticloadbalancing:ap-south-1:606639293354:targetgroup/cloud-native-cicd-green/61c4e3fa24f7deb3"
+
+        CLOUDFRONT_DISTRIBUTION_ID = "E3GATQ757RRPQ7"
     }
 
     stages {
@@ -63,6 +66,16 @@ pipeline {
         stage('Switch Traffic To Green') {
             steps {
                 sh './jenkins/scripts/traffic.sh green'
+            }
+        }
+
+        stage('Invalidate CloudFront Cache') {
+            steps {
+                sh '''
+                aws cloudfront create-invalidation \
+                  --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} \
+                  --paths "/*"
+                '''
             }
         }
     }
