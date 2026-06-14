@@ -83,6 +83,13 @@ resource "aws_ecs_service" "blue" {
     container_port = 80
   }
 
+  lifecycle {
+    ignore_changes = [
+      task_definition,
+      desired_count
+    ]
+  }
+
   depends_on = [
     aws_ecs_task_definition.app
   ]
@@ -118,6 +125,13 @@ resource "aws_ecs_service" "green" {
     container_name = "react-app"
 
     container_port = 80
+  }
+
+  lifecycle {
+    ignore_changes = [
+      task_definition,
+      desired_count
+    ]
   }
 
   depends_on = [
