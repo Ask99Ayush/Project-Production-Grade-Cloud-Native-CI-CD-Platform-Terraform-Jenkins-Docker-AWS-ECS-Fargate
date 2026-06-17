@@ -43,7 +43,7 @@ Deployment Successful
 
 ### Evidence
 
-![Jenkins Pipeline](../assets/jenkins-pipeline-success.png)
+![Jenkins Pipeline](../screenshots/jenkins-pipeline-success.png)
 
 ---
 
@@ -78,7 +78,7 @@ Traffic Switched
 
 ### Evidence
 
-![Blue-Green Deployment](../assets/blue-green-deployment.png)
+![Blue-Green Deployment](../screenshots/blue-green-deployment.png)
 
 ---
 
@@ -109,7 +109,7 @@ Previous Version Restored
 
 ### Evidence
 
-![Rollback Validation](../assets/traffic-switch.png)
+![Rollback Validation](../screenshots/traffic-switch.png)
 
 ---
 
@@ -131,15 +131,15 @@ Verify secure traffic flow between CloudFront, Application Load Balancer, and EC
 
 #### VPC Resource Map
 
-![VPC Resource Map](../assets/vpc-resource-map.png)
+![VPC Resource Map](../screenshots/vpc-resource-map.png)
 
 #### Application Load Balancer Target Health
 
-![ALB Target Health](../assets/alb-targets.png)
+![ALB Target Health](../screenshots/alb-targets.png)
 
 #### ECS Service Status
 
-![ECS Service](../assets/ecs-service.png)
+![ECS Service](../screenshots/ecs-service.png)
 
 ---
 
@@ -179,7 +179,7 @@ Verify CloudWatch metrics, dashboards, and observability capabilities.
 
 ### Evidence
 
-![CloudWatch Dashboard](../assets/cloudwatch-dashboard.png)
+![CloudWatch Dashboard](../screenshots/cloudwatch-dashboard.png)
 
 ---
 
@@ -241,7 +241,7 @@ Additional Tasks Created
 
 ### Evidence
 
-![Auto Scaling](../assets/autoscaling.png)
+![Auto Scaling](../screenshots/autoscaling.png)
 
 ---
 
@@ -261,7 +261,7 @@ Verify content delivery through CloudFront.
 
 ### Evidence
 
-![CloudFront Distribution](../assets/cloudfront-distribution.png)
+![CloudFront Distribution](../screenshots/cloudfront-distribution.png)
 
 ---
 
