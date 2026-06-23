@@ -7,6 +7,12 @@ Switchback automates the complete software delivery lifecycle — from infrastru
 
 ---
 
+## Architecture Diagram
+
+![Architecture Diagram](/assets/architecture-diagram.png)
+
+---
+
 ## Table of Contents
 
 - [Executive Summary](#executive-summary)
